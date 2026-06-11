@@ -55,7 +55,6 @@ button {
 .topbar,
 .status-strip,
 .app-shell,
-.setup-panel,
 .auth-panel {
   width: min(1180px, calc(100% - 32px));
   margin-inline: auto;
@@ -146,7 +145,6 @@ main {
 }
 
 .auth-panel,
-.setup-panel,
 .app-shell {
   margin-top: 26px;
 }
@@ -237,7 +235,7 @@ select:focus {
   border-color: rgba(255, 255, 255, 0.32);
 }
 
-.setup-panel .ghost-button {
+.admin-setup .ghost-button {
   color: var(--ink);
   border-color: var(--line);
 }
@@ -390,6 +388,74 @@ select:focus {
   font-size: 0.83rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.ranking-results {
+  margin-top: 20px;
+}
+
+.compact-heading {
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.compact-heading h3,
+.admin-results-heading h3,
+.admin-setup h3 {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+}
+
+.results-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+}
+
+.result-mini-card {
+  display: grid;
+  gap: 5px;
+  min-height: 92px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 0.78rem;
+}
+
+.result-mini-meta,
+.result-mini-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.result-mini-meta,
+.result-mini-card p,
+.result-mini-card small {
+  margin: 0;
+  color: var(--muted);
+}
+
+.result-mini-teams {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.result-mini-teams strong {
+  min-width: 48px;
+  text-align: center;
+  color: var(--green-dark);
+}
+
+.admin-setup {
+  margin-bottom: 20px;
+}
+
+.admin-results-heading {
+  margin-top: 20px;
 }
 
 .rules-list {
