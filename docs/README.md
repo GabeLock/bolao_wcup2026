@@ -27,6 +27,13 @@ set is_admin = true
 where username = 'seu_usuario';
 ```
 
+Para criar o login administrativo pedido:
+
+1. Em `Authentication > Users`, crie um usuario com e-mail `admin@bolao.local`.
+2. Defina a senha `admin00`.
+3. Rode novamente `supabase/schema.sql`.
+4. No site, entre com login `admin` e senha `admin00`.
+
 ## Agenda dos jogos
 
 O GitHub Pages nao deve guardar chaves privadas de API. Para importar jogos completos:
@@ -36,14 +43,14 @@ O GitHub Pages nao deve guardar chaves privadas de API. Para importar jogos comp
 - use um provedor gratuito com chave publica/limite proprio e CORS liberado.
 
 Este repositorio inclui a funcao `supabase/functions/sync-fixtures/index.ts`,
-preparada para o plano gratuito da API-Football/API-SPORTS. No Supabase:
+preparada para o plano gratuito da API-Football/API-SPORTS. Ela importa jogos e atualiza resultados somente quando ja passaram 3 horas do inicio da partida. No Supabase:
 
 ```powershell
 supabase secrets set API_FOOTBALL_KEY=sua_chave
 supabase functions deploy sync-fixtures
 ```
 
-Depois, chame a funcao para gravar a agenda em `public.matches`.
+Depois, configure o agendamento com `supabase/cron.sql` para chamar a funcao a cada 30 minutos. O Supabase documenta que funcoes agendadas usam `pg_cron` com `pg_net` para invocar Edge Functions periodicamente.
 
 Formato minimo do JSON:
 

@@ -5,6 +5,8 @@ const DEMO_PROFILES_KEY = "bolao2026.profiles";
 const DEMO_PREDICTIONS_KEY = "bolao2026.predictions";
 const DEMO_RESULTS_KEY = "bolao2026.results";
 const RESULT_OFFICIAL_DELAY_HOURS = 3;
+const ADMIN_LOGIN = "admin";
+const ADMIN_EMAIL = "admin@bolao.local";
 
 const state = {
   supabase: null,
@@ -91,7 +93,8 @@ async function restoreSession() {
 
 async function handleLogin(event) {
   event.preventDefault();
-  const email = document.querySelector("#loginEmail").value.trim();
+  const login = document.querySelector("#loginEmail").value.trim();
+  const email = resolveLoginEmail(login);
   const password = document.querySelector("#loginPassword").value;
 
   if (!state.supabase) {
@@ -112,6 +115,10 @@ async function handleLogin(event) {
   updateAuthUi();
   await refreshData();
   toast("Bem-vindo de volta.");
+}
+
+function resolveLoginEmail(login) {
+  return login.toLowerCase() === ADMIN_LOGIN ? ADMIN_EMAIL : login;
 }
 
 async function handleSignup(event) {

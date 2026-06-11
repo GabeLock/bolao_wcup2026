@@ -54,11 +54,15 @@ begin
     'palpiteiro'
   );
 
+  if lower(coalesce(new.email, '')) = 'admin@bolao.local' then
+    desired_username := 'admin';
+  end if;
+
   insert into public.profiles (id, username, is_admin, created_at)
   values (
     new.id,
     public.safe_profile_username(desired_username, new.id),
-    false,
+    lower(coalesce(new.email, '')) = 'admin@bolao.local',
     coalesce(new.created_at, now())
   )
   on conflict (id) do nothing;
@@ -105,6 +109,13 @@ select
   created_at
 from deduped_users
 on conflict (id) do nothing;
+
+update public.profiles
+set is_admin = true
+where id in (
+  select id from auth.users
+  where lower(coalesce(email, '')) = 'admin@bolao.local'
+);
 
 create table if not exists public.matches (
   id text primary key,

@@ -4,12 +4,17 @@ type ApiFootballFixture = {
   fixture: {
     id: number;
     date: string;
+    status?: { short?: string; long?: string };
     venue?: { name?: string; city?: string };
   };
   league?: { round?: string };
   teams?: {
     home?: { name?: string };
     away?: { name?: string };
+  };
+  goals?: {
+    home?: number | null;
+    away?: number | null;
   };
 };
 
@@ -53,7 +58,30 @@ Deno.serve(async () => {
   const { error } = await supabase.from("matches").upsert(matches, { onConflict: "id" });
 
   if (error) return json({ error: error.message }, 500);
-  return json({ imported: matches.length });
+
+  const now = Date.now();
+  const results = fixtures
+    .filter((item) => {
+      const kickoff = new Date(item.fixture.date).getTime();
+      return (
+        now >= kickoff + 3 * 60 * 60 * 1000 &&
+        typeof item.goals?.home === "number" &&
+        typeof item.goals?.away === "number"
+      );
+    })
+    .map((item) => ({
+      match_id: String(item.fixture.id),
+      home_goals: item.goals?.home ?? 0,
+      away_goals: item.goals?.away ?? 0,
+      updated_at: new Date().toISOString()
+    }));
+
+  if (results.length) {
+    const { error: resultsError } = await supabase.from("results").upsert(results, { onConflict: "match_id" });
+    if (resultsError) return json({ error: resultsError.message }, 500);
+  }
+
+  return json({ imported: matches.length, results_updated: results.length });
 });
 
 function groupFromRound(round?: string) {
