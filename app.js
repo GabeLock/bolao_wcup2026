@@ -590,14 +590,15 @@ async function buildRanking() {
     const { data, error } = await state.supabase.rpc("get_leaderboard");
     if (error) {
       toast(error.message);
-      return [];
+      return buildProfileOnlyRanking();
     }
-    return (data || []).map((row) => ({
+    const ranking = (data || []).map((row) => ({
       username: row.username,
       points: row.points,
       exacts: row.exacts,
       outcomes: row.outcomes
     }));
+    return ranking.length ? ranking : buildProfileOnlyRanking();
   }
 
   const users = new Map();
@@ -635,6 +636,15 @@ async function buildRanking() {
     b.exacts - a.exacts ||
     b.outcomes - a.outcomes
   );
+}
+
+function buildProfileOnlyRanking() {
+  return state.profiles.map((profile) => ({
+    username: profile.username || "Participante",
+    points: 0,
+    exacts: 0,
+    outcomes: 0
+  })).sort((a, b) => a.username.localeCompare(b.username));
 }
 
 function renderRules() {
