@@ -16,14 +16,8 @@ Aplicacao estatica para GitHub Pages com backend gratuito via Supabase.
 3. Em `Authentication > Providers`, deixe e-mail/senha ativo.
 4. Copie `Project URL` e `anon public key`.
 5. Cole esses dados no painel "Configurar GitHub Pages + Supabase" do site.
-   Para todos os usuarios usarem automaticamente o mesmo backend, tambem e possivel preencher `docs/config.js` antes do deploy:
-
-```js
-window.BOLAO_CONFIG = {
-  supabaseUrl: "https://xxxx.supabase.co",
-  supabaseAnonKey: "sua_chave_anon_publica"
-};
-```
+   O arquivo `docs/config.js` fica vazio por padrao para evitar publicar chaves no repositorio.
+   Se optar por configurar automaticamente para todos os usuarios, lembre que qualquer chave usada no navegador ficara visivel no JavaScript publicado; a seguranca deve depender das politicas RLS do Supabase.
 
 6. No Supabase, marque seu usuario como admin:
 
