@@ -275,8 +275,7 @@ returns table (
   username text,
   points integer,
   exacts integer,
-  outcomes integer,
-  knockout_points integer
+  outcomes integer
 )
 language sql
 stable
@@ -288,16 +287,7 @@ as $$
     pr.username as username,
     coalesce(sum(public.prediction_points(p.home_goals, p.away_goals, r.home_goals, r.away_goals)), 0)::integer as points,
     coalesce(sum(case when p.home_goals = r.home_goals and p.away_goals = r.away_goals then 1 else 0 end), 0)::integer as exacts,
-    coalesce(sum(case when sign(p.home_goals - p.away_goals) = sign(r.home_goals - r.away_goals) then 1 else 0 end), 0)::integer as outcomes,
-    coalesce(sum(case
-      when lower(coalesce(m.stage, '')) like '%final%'
-        or lower(coalesce(m.stage, '')) like '%mata%'
-        or lower(coalesce(m.stage, '')) like '%round%'
-        or lower(coalesce(m.stage, '')) like '%quarter%'
-        or lower(coalesce(m.stage, '')) like '%semi%'
-      then public.prediction_points(p.home_goals, p.away_goals, r.home_goals, r.away_goals)
-      else 0
-    end), 0)::integer as knockout_points
+    coalesce(sum(case when sign(p.home_goals - p.away_goals) = sign(r.home_goals - r.away_goals) then 1 else 0 end), 0)::integer as outcomes
   from public.profiles pr
   left join public.predictions p on p.user_id = pr.id
   left join public.matches m on m.id = p.match_id
@@ -305,7 +295,7 @@ as $$
     on r.match_id = p.match_id
     and m.kickoff_utc + interval '3 hours' <= now()
   group by pr.id, pr.username
-  order by points desc, exacts desc, outcomes desc, knockout_points desc, username asc;
+  order by points desc, exacts desc, outcomes desc, username asc;
 $$;
 
 grant execute on function public.get_leaderboard() to authenticated;

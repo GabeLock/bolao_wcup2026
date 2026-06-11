@@ -61,12 +61,15 @@ function bindEvents() {
 }
 
 function setupSupabase() {
-  const isConfigured = Boolean(state.config.url && state.config.anonKey && window.supabase);
-  state.supabase = isConfigured ? window.supabase.createClient(state.config.url, state.config.anonKey) : null;
+  const sharedConfig = window.BOLAO_CONFIG || {};
+  const url = state.config.url || sharedConfig.supabaseUrl;
+  const anonKey = state.config.anonKey || sharedConfig.supabaseAnonKey;
+  const isConfigured = Boolean(url && anonKey && window.supabase);
+  state.supabase = isConfigured ? window.supabase.createClient(url, anonKey) : null;
   el.modeLabel.textContent = isConfigured ? "Supabase ativo" : "Modo local";
   el.modeDescription.textContent = isConfigured
     ? "Login, palpites e ranking compartilhados pelo backend gratuito."
-    : "Dados salvos neste navegador. Configure o Supabase para publicar para todos.";
+    : "Dados salvos apenas neste navegador. Configure o Supabase no Admin para todos enxergarem o mesmo ranking.";
 }
 
 async function restoreSession() {
@@ -435,6 +438,11 @@ async function savePrediction(event) {
 async function renderRanking() {
   const ranking = await buildRanking();
   el.contentArea.innerHTML = `
+    ${state.supabase ? "" : `
+      <div class="panel local-ranking-warning">
+        Este ranking esta em modo local neste navegador. Para todos os palpiteiros se verem, configure o Supabase compartilhado na aba Admin ou em docs/config.js.
+      </div>
+    `}
     <table class="ranking-table">
       <thead>
         <tr>
@@ -443,7 +451,6 @@ async function renderRanking() {
           <th>Pontos</th>
           <th>Placares exatos</th>
           <th>Vencedor/empate</th>
-          <th>Mata-mata</th>
         </tr>
       </thead>
       <tbody>
@@ -454,9 +461,8 @@ async function renderRanking() {
             <td>${row.points}</td>
             <td>${row.exacts}</td>
             <td>${row.outcomes}</td>
-            <td>${row.knockoutPoints}</td>
           </tr>
-        `).join("") || `<tr><td colspan="6">Nenhum participante inscrito ainda.</td></tr>`}
+        `).join("") || `<tr><td colspan="5">Nenhum participante inscrito ainda.</td></tr>`}
       </tbody>
     </table>
     ${renderCompactResults()}
@@ -521,8 +527,7 @@ async function buildRanking() {
       username: row.username,
       points: row.points,
       exacts: row.exacts,
-      outcomes: row.outcomes,
-      knockoutPoints: row.knockout_points
+      outcomes: row.outcomes
     }));
   }
 
@@ -535,8 +540,7 @@ async function buildRanking() {
       username: profile.username || "Participante",
       points: 0,
       exacts: 0,
-      outcomes: 0,
-      knockoutPoints: 0
+      outcomes: 0
     });
   });
 
@@ -548,24 +552,19 @@ async function buildRanking() {
       username: state.profile?.username || "Participante",
       points: 0,
       exacts: 0,
-      outcomes: 0,
-      knockoutPoints: 0
+      outcomes: 0
     };
     const points = scorePrediction(prediction, result, match);
     row.points += points;
     if (points === 5) row.exacts += 1;
     if (sameOutcome(prediction, result)) row.outcomes += 1;
-    if (match?.stage?.toLowerCase().includes("mata") || match?.stage?.toLowerCase().includes("final")) {
-      row.knockoutPoints += points;
-    }
     users.set(prediction.user_id, row);
   });
 
   return [...users.values()].sort((a, b) =>
     b.points - a.points ||
     b.exacts - a.exacts ||
-    b.outcomes - a.outcomes ||
-    b.knockoutPoints - a.knockoutPoints
+    b.outcomes - a.outcomes
   );
 }
 
@@ -577,7 +576,7 @@ function renderRules() {
     "Acerto de vencedor ou empate vale 3 pontos.",
     "Cada numero de gols correto de uma equipe soma 1 ponto quando nao houver placar exato.",
     "No mata-mata, considerar tempo normal mais prorrogacao; penaltis nao entram.",
-    "Desempate: placares exatos, acertos de vencedor/empate, pontos no mata-mata, campeao correto e sorteio.",
+    "Desempate: placares exatos, acertos de vencedor/empate, palpite correto do campeao e sorteio.",
     "A tabela de pontuacao deve ser atualizada apos cada rodada ou na periodicidade combinada pela organizacao.",
     "Os placares reais devem ser atualizados no sistema 3 horas apos o horario de inicio de cada jogo, quando passam a ser considerados oficiais para conferencia dos palpites.",
     "Todos os participantes devem ter acesso a classificacao geral.",
