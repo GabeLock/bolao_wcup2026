@@ -134,8 +134,22 @@ drop policy if exists "admins write results" on public.results;
 create policy "admins write results"
 on public.results for all
 to authenticated
-using (public.is_admin())
-with check (public.is_admin());
+using (
+  public.is_admin()
+  and exists (
+    select 1 from public.matches
+    where matches.id = results.match_id
+      and matches.kickoff_utc + interval '3 hours' <= now()
+  )
+)
+with check (
+  public.is_admin()
+  and exists (
+    select 1 from public.matches
+    where matches.id = results.match_id
+      and matches.kickoff_utc + interval '3 hours' <= now()
+  )
+);
 
 create or replace function public.prediction_points(
   pred_home integer,
@@ -171,12 +185,12 @@ security definer
 set search_path = public
 as $$
   select
-    p.user_id,
-    coalesce(pr.username, 'Participante') as username,
-    sum(public.prediction_points(p.home_goals, p.away_goals, r.home_goals, r.away_goals))::integer as points,
-    sum(case when p.home_goals = r.home_goals and p.away_goals = r.away_goals then 1 else 0 end)::integer as exacts,
-    sum(case when sign(p.home_goals - p.away_goals) = sign(r.home_goals - r.away_goals) then 1 else 0 end)::integer as outcomes,
-    sum(case
+    pr.id as user_id,
+    pr.username as username,
+    coalesce(sum(public.prediction_points(p.home_goals, p.away_goals, r.home_goals, r.away_goals)), 0)::integer as points,
+    coalesce(sum(case when p.home_goals = r.home_goals and p.away_goals = r.away_goals then 1 else 0 end), 0)::integer as exacts,
+    coalesce(sum(case when sign(p.home_goals - p.away_goals) = sign(r.home_goals - r.away_goals) then 1 else 0 end), 0)::integer as outcomes,
+    coalesce(sum(case
       when lower(coalesce(m.stage, '')) like '%final%'
         or lower(coalesce(m.stage, '')) like '%mata%'
         or lower(coalesce(m.stage, '')) like '%round%'
@@ -184,12 +198,14 @@ as $$
         or lower(coalesce(m.stage, '')) like '%semi%'
       then public.prediction_points(p.home_goals, p.away_goals, r.home_goals, r.away_goals)
       else 0
-    end)::integer as knockout_points
-  from public.predictions p
-  join public.results r on r.match_id = p.match_id
-  join public.matches m on m.id = p.match_id
-  left join public.profiles pr on pr.id = p.user_id
-  group by p.user_id, pr.username
+    end), 0)::integer as knockout_points
+  from public.profiles pr
+  left join public.predictions p on p.user_id = pr.id
+  left join public.matches m on m.id = p.match_id
+  left join public.results r
+    on r.match_id = p.match_id
+    and m.kickoff_utc + interval '3 hours' <= now()
+  group by pr.id, pr.username
   order by points desc, exacts desc, outcomes desc, knockout_points desc, username asc;
 $$;
 
