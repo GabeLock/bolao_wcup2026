@@ -420,8 +420,10 @@ async function savePrediction(event) {
   };
 
   if (state.supabase) {
-    const { error } = await state.supabase.from("predictions").upsert(payload, {
-      onConflict: "user_id,match_id"
+    const { error } = await state.supabase.rpc("upsert_prediction", {
+      p_match_id: matchId,
+      p_home_goals: payload.home_goals,
+      p_away_goals: payload.away_goals
     });
     if (error) return toast(error.message);
   } else {
