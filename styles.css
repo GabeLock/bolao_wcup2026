@@ -390,6 +390,12 @@ select:focus {
   letter-spacing: 0.06em;
 }
 
+.local-ranking-warning {
+  margin-bottom: 12px;
+  border-left: 4px solid var(--red);
+  color: var(--muted);
+}
+
 .ranking-results {
   margin-top: 20px;
 }

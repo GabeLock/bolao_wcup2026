@@ -16,6 +16,15 @@ Aplicacao estatica para GitHub Pages com backend gratuito via Supabase.
 3. Em `Authentication > Providers`, deixe e-mail/senha ativo.
 4. Copie `Project URL` e `anon public key`.
 5. Cole esses dados no painel "Configurar GitHub Pages + Supabase" do site.
+   Para todos os usuarios usarem automaticamente o mesmo backend, tambem e possivel preencher `docs/config.js` antes do deploy:
+
+```js
+window.BOLAO_CONFIG = {
+  supabaseUrl: "https://xxxx.supabase.co",
+  supabaseAnonKey: "sua_chave_anon_publica"
+};
+```
+
 6. No Supabase, marque seu usuario como admin:
 
 ```sql
@@ -69,7 +78,7 @@ O arquivo `docs/data/worldcup-2026-seed.json` e uma carga inicial parcial para d
 - placar exato: 5 pontos;
 - vencedor ou empate correto: 3 pontos;
 - gols corretos por equipe: +1 ponto por equipe quando nao for placar exato;
-- ranking com desempate por placares exatos, acertos de vencedor/empate e pontos no mata-mata;
+- ranking com desempate por placares exatos e acertos de vencedor/empate;
 - resultados de penaltis ficam fora da modelagem;
 - classificacao geral acessivel a todos os participantes;
 - atualizacao da tabela apos cada rodada ou em periodicidade combinada;
