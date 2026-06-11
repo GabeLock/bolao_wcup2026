@@ -340,8 +340,42 @@ select:focus {
   font-weight: 900;
 }
 
-.teams span:first-child {
+.team-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.team-side.home {
+  justify-content: flex-end;
   text-align: right;
+}
+
+.team-side.away {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.team-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.team-flag {
+  flex: 0 0 auto;
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+.score-team {
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 32px;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  text-align: center;
 }
 
 .score-form {
@@ -537,7 +571,9 @@ select:focus {
     text-align: left;
   }
 
-  .teams span:first-child {
+  .team-side.home,
+  .team-side.away {
+    justify-content: flex-start;
     text-align: left;
   }
 

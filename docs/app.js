@@ -7,6 +7,56 @@ const DEMO_RESULTS_KEY = "bolao2026.results";
 const RESULT_OFFICIAL_DELAY_HOURS = 3;
 const ADMIN_LOGIN = "admin";
 const ADMIN_EMAIL = "admin@bolao.local";
+const TEAM_FLAGS = {
+  Algeria: "🇩🇿",
+  Argentina: "🇦🇷",
+  Australia: "🇦🇺",
+  Austria: "🇦🇹",
+  Belgium: "🇧🇪",
+  "Bosnia and Herzegovina": "🇧🇦",
+  Brazil: "🇧🇷",
+  Canada: "🇨🇦",
+  "Cape Verde": "🇨🇻",
+  Colombia: "🇨🇴",
+  Croatia: "🇭🇷",
+  Curacao: "🇨🇼",
+  "Czech Republic": "🇨🇿",
+  "DR Congo": "🇨🇩",
+  Ecuador: "🇪🇨",
+  Egypt: "🇪🇬",
+  England: "🏴",
+  France: "🇫🇷",
+  Germany: "🇩🇪",
+  Ghana: "🇬🇭",
+  Haiti: "🇭🇹",
+  Iran: "🇮🇷",
+  Iraq: "🇮🇶",
+  "Ivory Coast": "🇨🇮",
+  Japan: "🇯🇵",
+  Jordan: "🇯🇴",
+  Mexico: "🇲🇽",
+  Morocco: "🇲🇦",
+  Netherlands: "🇳🇱",
+  "New Zealand": "🇳🇿",
+  Norway: "🇳🇴",
+  Panama: "🇵🇦",
+  Paraguay: "🇵🇾",
+  Portugal: "🇵🇹",
+  Qatar: "🇶🇦",
+  "Saudi Arabia": "🇸🇦",
+  Scotland: "🏴",
+  Senegal: "🇸🇳",
+  "South Africa": "🇿🇦",
+  "South Korea": "🇰🇷",
+  Spain: "🇪🇸",
+  Sweden: "🇸🇪",
+  Switzerland: "🇨🇭",
+  Tunisia: "🇹🇳",
+  Turkey: "🇹🇷",
+  "United States": "🇺🇸",
+  Uruguay: "🇺🇾",
+  Uzbekistan: "🇺🇿"
+};
 
 const state = {
   supabase: null,
@@ -382,9 +432,9 @@ function renderMatchCard(match) {
           ${points === null ? "" : `<span>${points} pts</span>`}
         </p>
         <div class="teams">
-          <span>${escapeHtml(match.home_team)}</span>
+          ${renderTeamName(match.home_team, "home")}
           <span>x</span>
-          <span>${escapeHtml(match.away_team)}</span>
+          ${renderTeamName(match.away_team, "away")}
         </div>
       </div>
       ${
@@ -393,11 +443,11 @@ function renderMatchCard(match) {
           : `
             <form class="score-form" data-save-prediction="${escapeHtml(match.id)}">
               <label>
-                ${escapeHtml(match.home_team)}
+                ${renderTeamName(match.home_team, "home", "score-team")}
                 <input name="home_goals" type="number" min="0" max="30" value="${prediction?.home_goals ?? ""}" required>
               </label>
               <label>
-                ${escapeHtml(match.away_team)}
+                ${renderTeamName(match.away_team, "away", "score-team")}
                 <input name="away_goals" type="number" min="0" max="30" value="${prediction?.away_goals ?? ""}" required>
               </label>
               <button class="primary-button" type="submit">Salvar palpite</button>
@@ -406,6 +456,16 @@ function renderMatchCard(match) {
       }
     </article>
   `;
+}
+
+function renderTeamName(team, side, extraClass = "") {
+  const flag = TEAM_FLAGS[team] || "";
+  const name = `<span class="team-name">${escapeHtml(team)}</span>`;
+  const flagHtml = flag ? `<span class="team-flag" aria-hidden="true">${flag}</span>` : "";
+  const content = side === "home"
+    ? `${name}${flagHtml}`
+    : `${flagHtml}${name}`;
+  return `<span class="team-side ${side} ${extraClass}">${content}</span>`;
 }
 
 async function savePrediction(event) {
