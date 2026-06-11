@@ -1,0 +1,122 @@
+[
+  {
+    "id": "match-001",
+    "match_number": 1,
+    "stage": "Grupo A",
+    "group_name": "Grupo A",
+    "home_team": "Mexico",
+    "away_team": "South Africa",
+    "kickoff_utc": "2026-06-11T19:00:00.000Z",
+    "venue": "Estadio Azteca",
+    "city": "Mexico City",
+    "source": "seed"
+  },
+  {
+    "id": "match-002",
+    "match_number": 2,
+    "stage": "Grupo A",
+    "group_name": "Grupo A",
+    "home_team": "South Korea",
+    "away_team": "Czech Republic",
+    "kickoff_utc": "2026-06-12T02:00:00.000Z",
+    "venue": "Estadio Akron",
+    "city": "Zapopan",
+    "source": "seed"
+  },
+  {
+    "id": "match-003",
+    "match_number": 3,
+    "stage": "Grupo B",
+    "group_name": "Grupo B",
+    "home_team": "Canada",
+    "away_team": "Bosnia and Herzegovina",
+    "kickoff_utc": "2026-06-12T19:00:00.000Z",
+    "venue": "BMO Field",
+    "city": "Toronto",
+    "source": "seed"
+  },
+  {
+    "id": "match-004",
+    "match_number": 4,
+    "stage": "Grupo D",
+    "group_name": "Grupo D",
+    "home_team": "United States",
+    "away_team": "Paraguay",
+    "kickoff_utc": "2026-06-13T01:00:00.000Z",
+    "venue": "SoFi Stadium",
+    "city": "Inglewood",
+    "source": "seed"
+  },
+  {
+    "id": "match-005",
+    "match_number": 5,
+    "stage": "Grupo C",
+    "group_name": "Grupo C",
+    "home_team": "Haiti",
+    "away_team": "Scotland",
+    "kickoff_utc": "2026-06-14T01:00:00.000Z",
+    "venue": "Gillette Stadium",
+    "city": "Foxborough",
+    "source": "seed"
+  },
+  {
+    "id": "match-006",
+    "match_number": 6,
+    "stage": "Grupo D",
+    "group_name": "Grupo D",
+    "home_team": "Australia",
+    "away_team": "Turkey",
+    "kickoff_utc": "2026-06-14T04:00:00.000Z",
+    "venue": "BC Place",
+    "city": "Vancouver",
+    "source": "seed"
+  },
+  {
+    "id": "match-007",
+    "match_number": 7,
+    "stage": "Grupo C",
+    "group_name": "Grupo C",
+    "home_team": "Brazil",
+    "away_team": "Morocco",
+    "kickoff_utc": "2026-06-13T22:00:00.000Z",
+    "venue": "MetLife Stadium",
+    "city": "East Rutherford",
+    "source": "seed"
+  },
+  {
+    "id": "match-008",
+    "match_number": 8,
+    "stage": "Grupo B",
+    "group_name": "Grupo B",
+    "home_team": "Qatar",
+    "away_team": "Switzerland",
+    "kickoff_utc": "2026-06-13T19:00:00.000Z",
+    "venue": "Levi's Stadium",
+    "city": "Santa Clara",
+    "source": "seed"
+  },
+  {
+    "id": "match-009",
+    "match_number": 9,
+    "stage": "Grupo E",
+    "group_name": "Grupo E",
+    "home_team": "Ivory Coast",
+    "away_team": "Ecuador",
+    "kickoff_utc": "2026-06-14T23:00:00.000Z",
+    "venue": "Lincoln Financial Field",
+    "city": "Philadelphia",
+    "source": "seed"
+  },
+  {
+    "id": "match-010",
+    "match_number": 10,
+    "stage": "Grupo E",
+    "group_name": "Grupo E",
+    "home_team": "Germany",
+    "away_team": "Curacao",
+    "kickoff_utc": "2026-06-14T17:00:00.000Z",
+    "venue": "NRG Stadium",
+    "city": "Houston",
+    "source": "seed"
+  }
+]
