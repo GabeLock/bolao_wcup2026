@@ -498,6 +498,29 @@ select:focus {
   margin-top: 20px;
 }
 
+.admin-audit {
+  margin-bottom: 20px;
+}
+
+.audit-table-wrapper {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.audit-table {
+  min-width: 760px;
+}
+
+.audit-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .rules-list {
   display: grid;
   gap: 12px;

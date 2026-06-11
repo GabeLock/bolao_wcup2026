@@ -377,7 +377,7 @@ function render() {
   if (state.view === "palpites") return renderMatches();
   if (state.view === "ranking") return renderRanking();
   if (state.view === "regras") return renderRules();
-  renderAdmin();
+  return renderAdmin();
 }
 
 function renderMatches() {
@@ -669,15 +669,17 @@ function renderRules() {
   `;
 }
 
-function renderAdmin() {
+async function renderAdmin() {
   const admin = state.profile?.is_admin || !state.supabase;
   if (!admin) {
     el.contentArea.innerHTML = `<div class="panel">Apenas administradores podem lancar resultados e importar jogos.</div>`;
     return;
   }
 
+  const auditRows = await loadAdminPredictionAudit();
   el.contentArea.innerHTML = `
     ${renderAdminSetup()}
+    ${renderAdminPredictionAudit(auditRows)}
     <div class="section-heading admin-results-heading">
       <p class="eyebrow">Placares oficiais</p>
       <h3>Atualizar resultados</h3>
@@ -710,6 +712,82 @@ function renderAdmin() {
     form.addEventListener("submit", saveResult);
   });
   bindAdminSetupEvents();
+}
+
+async function loadAdminPredictionAudit() {
+  if (state.supabase) {
+    const { data, error } = await state.supabase.rpc("get_admin_predictions_audit");
+    if (error) {
+      toast(error.message);
+      return [];
+    }
+    return data || [];
+  }
+
+  const profilesById = new Map(state.profiles.map((profile) => [profile.id, profile]));
+  return state.predictions.map((prediction) => {
+    const match = state.matches.find((item) => item.id === prediction.match_id) || {};
+    const profile = profilesById.get(prediction.user_id);
+    const official = findOfficialResult(prediction.match_id);
+    return {
+      user_id: prediction.user_id,
+      username: profile?.username || "Participante",
+      match_id: prediction.match_id,
+      match_number: match.match_number,
+      stage: match.stage || match.group_name || "Copa",
+      home_team: match.home_team || "Time A",
+      away_team: match.away_team || "Time B",
+      kickoff_utc: match.kickoff_utc,
+      predicted_home_goals: prediction.home_goals,
+      predicted_away_goals: prediction.away_goals,
+      submitted_at: prediction.submitted_at,
+      official_home_goals: official?.home_goals ?? null,
+      official_away_goals: official?.away_goals ?? null
+    };
+  }).sort((a, b) => new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0));
+}
+
+function renderAdminPredictionAudit(rows) {
+  return `
+    <section class="admin-audit">
+      <div class="section-heading admin-results-heading">
+        <p class="eyebrow">Governanca dos dados</p>
+        <h3>Auditoria de palpites</h3>
+      </div>
+      <div class="audit-table-wrapper">
+        <table class="ranking-table audit-table">
+          <thead>
+            <tr>
+              <th>Participante</th>
+              <th>Jogo</th>
+              <th>Palpite</th>
+              <th>Resultado</th>
+              <th>Enviado em</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => {
+              const officialScore = row.official_home_goals === null || row.official_home_goals === undefined
+                ? "-"
+                : `${row.official_home_goals} x ${row.official_away_goals}`;
+              return `
+                <tr>
+                  <td>${escapeHtml(row.username || "Participante")}</td>
+                  <td>
+                    <strong>${escapeHtml(row.home_team)} x ${escapeHtml(row.away_team)}</strong>
+                    <small>${escapeHtml(row.stage || "Copa")} ${row.match_number ? `- Jogo ${row.match_number}` : ""}</small>
+                  </td>
+                  <td>${row.predicted_home_goals} x ${row.predicted_away_goals}</td>
+                  <td>${officialScore}</td>
+                  <td>${formatAuditDate(row.submitted_at)}</td>
+                </tr>
+              `;
+            }).join("") || `<tr><td colspan="5">Nenhum palpite registrado ainda.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
 }
 
 function renderAdminSetup() {
@@ -935,6 +1013,18 @@ function formatOfficialAt(match) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(officialResultAt(match));
+}
+
+function formatAuditDate(iso) {
+  if (!iso) return "-";
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: BR_TZ,
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(iso));
 }
 
 function upsertDemoProfile(id, username, isAdmin = false) {
