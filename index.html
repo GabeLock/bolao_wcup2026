@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bolao da Copa 2026</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="topbar" aria-label="Navegacao principal">
+        <a class="brand" href="#palpites" aria-label="Bolao da Copa 2026">
+          <span class="brand-mark">26</span>
+          <span>Bolao da Copa</span>
+        </a>
+        <div class="nav-actions">
+          <button class="icon-button" id="refreshButton" type="button" title="Atualizar dados" aria-label="Atualizar dados">
+            <span aria-hidden="true">R</span>
+          </button>
+          <button class="ghost-button" id="logoutButton" type="button" hidden>Sair</button>
+        </div>
+      </nav>
+
+      <section class="hero-copy">
+        <p class="eyebrow">Copa do Mundo FIFA 2026</p>
+        <h1>Bolao entre amigos, com palpites travados no apito inicial.</h1>
+        <p>
+          Cadastre participantes, registre placares, acompanhe ranking e pontuacao
+          com criterio automatico por jogo.
+        </p>
+      </section>
+    </header>
+
+    <main>
+      <section class="status-strip" aria-live="polite">
+        <div>
+          <strong id="modeLabel">Modo local</strong>
+          <span id="modeDescription">Configure o Supabase para ativar login real e persistencia compartilhada.</span>
+        </div>
+        <div>
+          <strong id="clockLabel">Horario BR</strong>
+          <span id="clockValue">--</span>
+        </div>
+      </section>
+
+      <section class="auth-panel" id="authPanel">
+        <div class="section-heading">
+          <p class="eyebrow">Acesso</p>
+          <h2>Entrar ou criar participante</h2>
+        </div>
+
+        <div class="auth-grid">
+          <form id="loginForm" class="panel" autocomplete="on">
+            <h3>Login</h3>
+            <label>
+              E-mail
+              <input id="loginEmail" type="email" autocomplete="email" required>
+            </label>
+            <label>
+              Senha
+              <input id="loginPassword" type="password" autocomplete="current-password" required>
+            </label>
+            <button class="primary-button" type="submit">Entrar</button>
+          </form>
+
+          <form id="signupForm" class="panel" autocomplete="on">
+            <h3>Cadastro</h3>
+            <label>
+              Nome de usuario
+              <input id="signupUsername" type="text" autocomplete="nickname" minlength="3" required>
+            </label>
+            <label>
+              E-mail
+              <input id="signupEmail" type="email" autocomplete="email" required>
+            </label>
+            <label>
+              Senha
+              <input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required>
+            </label>
+            <button class="primary-button" type="submit">Criar conta</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="app-shell" id="appShell" hidden>
+        <aside class="sidebar" aria-label="Secoes do bolao">
+          <button class="tab-button active" data-view="palpites" type="button">Palpites</button>
+          <button class="tab-button" data-view="ranking" type="button">Ranking</button>
+          <button class="tab-button" data-view="regras" type="button">Regras</button>
+          <button class="tab-button" data-view="admin" type="button">Admin</button>
+        </aside>
+
+        <section class="workspace">
+          <div class="section-heading">
+            <p class="eyebrow" id="userGreeting">Participante</p>
+            <h2 id="viewTitle">Palpites dos jogos</h2>
+          </div>
+
+          <div class="filters" id="matchFilters">
+            <label>
+              Grupo/fase
+              <select id="stageFilter"></select>
+            </label>
+            <label>
+              Status
+              <select id="statusFilter">
+                <option value="all">Todos</option>
+                <option value="open">Abertos</option>
+                <option value="locked">Iniciados/travados</option>
+                <option value="finished">Com resultado</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="contentArea" class="content-area"></div>
+        </section>
+      </section>
+
+      <section class="setup-panel">
+        <div class="section-heading">
+          <p class="eyebrow">Publicacao gratuita</p>
+          <h2>Configurar GitHub Pages + Supabase</h2>
+        </div>
+        <div class="setup-grid">
+          <form id="configForm" class="panel">
+            <h3>Credenciais publicas do Supabase</h3>
+            <label>
+              URL do projeto
+              <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co">
+            </label>
+            <label>
+              Chave anon publica
+              <input id="supabaseAnonKey" type="text" placeholder="eyJhbGciOi...">
+            </label>
+            <button class="secondary-button" type="submit">Salvar configuracao</button>
+            <button class="ghost-button" id="clearConfigButton" type="button">Usar modo local</button>
+          </form>
+
+          <div class="panel">
+            <h3>Fonte dos jogos</h3>
+            <p>
+              O site aceita importacao por JSON/API gratuita. Para chaves privadas,
+              use uma Supabase Edge Function ou outro proxy gratuito.
+            </p>
+            <form id="scheduleImportForm">
+              <label>
+                URL JSON da agenda
+                <input id="scheduleUrl" type="url" placeholder="https://.../worldcup-2026.json">
+              </label>
+              <button class="secondary-button" type="submit">Importar jogos</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
