@@ -936,18 +936,18 @@ function handleConfigSave(event) {
 function clearConfig() {
   localStorage.removeItem(CONFIG_KEY);
   state.config = {};
-  state.supabase = null;
   hydrateConfigForm();
   setupSupabase();
   restoreSession().then(refreshData);
-  toast("Modo local ativado.");
+  toast(state.supabase ? "Configuracao local removida. Supabase publicado ativo." : "Modo local ativado.");
 }
 
 function hydrateConfigForm() {
   const supabaseUrl = document.querySelector("#supabaseUrl");
   const supabaseAnonKey = document.querySelector("#supabaseAnonKey");
-  if (supabaseUrl) supabaseUrl.value = state.config.url || "";
-  if (supabaseAnonKey) supabaseAnonKey.value = state.config.anonKey || "";
+  const sharedConfig = window.BOLAO_CONFIG || {};
+  if (supabaseUrl) supabaseUrl.value = state.config.url || sharedConfig.supabaseUrl || "";
+  if (supabaseAnonKey) supabaseAnonKey.value = state.config.anonKey || sharedConfig.supabaseAnonKey || "";
 }
 
 function loadConfig() {
