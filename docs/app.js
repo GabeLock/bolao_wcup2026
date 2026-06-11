@@ -492,7 +492,12 @@ async function savePrediction(event) {
       p_home_goals: payload.home_goals,
       p_away_goals: payload.away_goals
     });
-    if (error) return toast(error.message);
+    if (error) {
+      const { error: tableError } = await state.supabase
+        .from("predictions")
+        .upsert(payload, { onConflict: "user_id,match_id" });
+      if (tableError) return toast(tableError.message || error.message);
+    }
   } else {
     const others = state.predictions.filter((item) => item.match_id !== matchId);
     state.predictions = [...others, payload];
