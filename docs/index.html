@@ -118,42 +118,6 @@
         </section>
       </section>
 
-      <section class="setup-panel">
-        <div class="section-heading">
-          <p class="eyebrow">Publicacao gratuita</p>
-          <h2>Configurar GitHub Pages + Supabase</h2>
-        </div>
-        <div class="setup-grid">
-          <form id="configForm" class="panel">
-            <h3>Credenciais publicas do Supabase</h3>
-            <label>
-              URL do projeto
-              <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co">
-            </label>
-            <label>
-              Chave anon publica
-              <input id="supabaseAnonKey" type="text" placeholder="eyJhbGciOi...">
-            </label>
-            <button class="secondary-button" type="submit">Salvar configuracao</button>
-            <button class="ghost-button" id="clearConfigButton" type="button">Usar modo local</button>
-          </form>
-
-          <div class="panel">
-            <h3>Fonte dos jogos</h3>
-            <p>
-              O site aceita importacao por JSON/API gratuita. Para chaves privadas,
-              use uma Supabase Edge Function ou outro proxy gratuito.
-            </p>
-            <form id="scheduleImportForm">
-              <label>
-                URL JSON da agenda
-                <input id="scheduleUrl" type="url" placeholder="https://.../worldcup-2026.json">
-              </label>
-              <button class="secondary-button" type="submit">Importar jogos</button>
-            </form>
-          </div>
-        </div>
-      </section>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

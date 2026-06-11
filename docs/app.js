@@ -28,9 +28,6 @@ const el = {
   refreshButton: document.querySelector("#refreshButton"),
   loginForm: document.querySelector("#loginForm"),
   signupForm: document.querySelector("#signupForm"),
-  configForm: document.querySelector("#configForm"),
-  clearConfigButton: document.querySelector("#clearConfigButton"),
-  scheduleImportForm: document.querySelector("#scheduleImportForm"),
   stageFilter: document.querySelector("#stageFilter"),
   statusFilter: document.querySelector("#statusFilter"),
   matchFilters: document.querySelector("#matchFilters"),
@@ -56,9 +53,6 @@ function bindEvents() {
   el.signupForm.addEventListener("submit", handleSignup);
   el.logoutButton.addEventListener("click", handleLogout);
   el.refreshButton.addEventListener("click", refreshData);
-  el.configForm.addEventListener("submit", handleConfigSave);
-  el.clearConfigButton.addEventListener("click", clearConfig);
-  el.scheduleImportForm.addEventListener("submit", handleScheduleImport);
   el.stageFilter.addEventListener("change", render);
   el.statusFilter.addEventListener("change", render);
   document.querySelectorAll(".tab-button").forEach((button) => {
@@ -304,7 +298,7 @@ function renderMatches() {
       (status === "locked" && locked && !result) ||
       (status === "finished" && result);
     return (stage === "all" || matchStage === stage) && statusOk;
-  });
+  }).sort((a, b) => new Date(a.kickoff_utc) - new Date(b.kickoff_utc));
 
   el.contentArea.innerHTML = rows.length
     ? rows.map(renderMatchCard).join("")
@@ -430,6 +424,54 @@ async function renderRanking() {
         `).join("") || `<tr><td colspan="6">Nenhum participante inscrito ainda.</td></tr>`}
       </tbody>
     </table>
+    ${renderCompactResults()}
+  `;
+}
+
+function renderCompactResults() {
+  const playedMatches = state.matches
+    .filter((match) => canUpdateOfficialResult(match))
+    .sort((a, b) => new Date(b.kickoff_utc) - new Date(a.kickoff_utc));
+
+  return `
+    <section class="ranking-results">
+      <div class="section-heading compact-heading">
+        <p class="eyebrow">Resultados</p>
+        <h3>Jogos realizados</h3>
+      </div>
+      <div class="results-compact-grid">
+        ${playedMatches.map((match) => {
+          const official = findOfficialResult(match.id);
+          const rawResult = findResult(match.id);
+          const score = official
+            ? `${official.home_goals} x ${official.away_goals}`
+            : rawResult
+              ? `${rawResult.home_goals} x ${rawResult.away_goals}`
+              : "-";
+          const status = official
+            ? "Oficial"
+            : rawResult
+              ? `Oficial em ${formatOfficialAt(match)}`
+              : `Aguardando placar (${formatOfficialAt(match)})`;
+
+          return `
+            <article class="result-mini-card">
+              <div class="result-mini-meta">
+                <span>${formatKickoff(match.kickoff_utc)}</span>
+                <span>${escapeHtml(match.stage || match.group_name || "Copa")}</span>
+              </div>
+              <div class="result-mini-teams">
+                <span>${escapeHtml(match.home_team)}</span>
+                <strong>${score}</strong>
+                <span>${escapeHtml(match.away_team)}</span>
+              </div>
+              <p>${escapeHtml(match.city || match.venue || "")}</p>
+              <small>${status}</small>
+            </article>
+          `;
+        }).join("") || `<div class="panel">Nenhum jogo realizado ainda.</div>`}
+      </div>
+    </section>
   `;
 }
 
@@ -522,6 +564,11 @@ function renderAdmin() {
   }
 
   el.contentArea.innerHTML = `
+    ${renderAdminSetup()}
+    <div class="section-heading admin-results-heading">
+      <p class="eyebrow">Placares oficiais</p>
+      <h3>Atualizar resultados</h3>
+    </div>
     <div class="admin-grid">
       ${state.matches.map((match) => {
         const result = findResult(match.id);
@@ -549,6 +596,59 @@ function renderAdmin() {
   document.querySelectorAll(".admin-result-form").forEach((form) => {
     form.addEventListener("submit", saveResult);
   });
+  bindAdminSetupEvents();
+}
+
+function renderAdminSetup() {
+  return `
+    <section class="admin-setup">
+      <div class="section-heading">
+        <p class="eyebrow">Publicacao gratuita</p>
+        <h3>Configurar GitHub Pages + Supabase</h3>
+      </div>
+      <div class="setup-grid">
+        <form id="configForm" class="panel">
+          <h3>Credenciais publicas do Supabase</h3>
+          <label>
+            URL do projeto
+            <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co">
+          </label>
+          <label>
+            Chave anon publica
+            <input id="supabaseAnonKey" type="text" placeholder="eyJhbGciOi...">
+          </label>
+          <button class="secondary-button" type="submit">Salvar configuracao</button>
+          <button class="ghost-button" id="clearConfigButton" type="button">Usar modo local</button>
+        </form>
+
+        <div class="panel">
+          <h3>Fonte dos jogos</h3>
+          <p>
+            O site aceita importacao por JSON/API gratuita. Para chaves privadas,
+            use uma Supabase Edge Function ou outro proxy gratuito.
+          </p>
+          <form id="scheduleImportForm">
+            <label>
+              URL JSON da agenda
+              <input id="scheduleUrl" type="url" placeholder="https://.../worldcup-2026.json">
+            </label>
+            <button class="secondary-button" type="submit">Importar jogos</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function bindAdminSetupEvents() {
+  const configForm = document.querySelector("#configForm");
+  const clearConfigButton = document.querySelector("#clearConfigButton");
+  const scheduleImportForm = document.querySelector("#scheduleImportForm");
+
+  if (configForm) configForm.addEventListener("submit", handleConfigSave);
+  if (clearConfigButton) clearConfigButton.addEventListener("click", clearConfig);
+  if (scheduleImportForm) scheduleImportForm.addEventListener("submit", handleScheduleImport);
+  hydrateConfigForm();
 }
 
 async function saveResult(event) {
@@ -653,8 +753,10 @@ function clearConfig() {
 }
 
 function hydrateConfigForm() {
-  document.querySelector("#supabaseUrl").value = state.config.url || "";
-  document.querySelector("#supabaseAnonKey").value = state.config.anonKey || "";
+  const supabaseUrl = document.querySelector("#supabaseUrl");
+  const supabaseAnonKey = document.querySelector("#supabaseAnonKey");
+  if (supabaseUrl) supabaseUrl.value = state.config.url || "";
+  if (supabaseAnonKey) supabaseAnonKey.value = state.config.anonKey || "";
 }
 
 function loadConfig() {
