@@ -167,7 +167,42 @@ async function loadProfile() {
     toast(error.message);
     return;
   }
-  state.profile = data || { username: state.user.email, is_admin: false };
+
+  if (!data) {
+    state.profile = await ensureProfile();
+    return;
+  }
+
+  state.profile = data;
+}
+
+async function ensureProfile() {
+  const metadataUsername = state.user.user_metadata?.username;
+  const emailUsername = state.user.email?.split("@")[0];
+  const desiredUsername = metadataUsername || emailUsername || "palpiteiro";
+  const fallbackUsername = `${desiredUsername}`.replace(/\s+/g, "_").slice(0, 31) || "palpiteiro";
+  const { data: safeUsername } = await state.supabase.rpc("safe_profile_username", {
+    base_username: fallbackUsername,
+    user_id: state.user.id
+  });
+  const profile = {
+    id: state.user.id,
+    username: safeUsername || (fallbackUsername.length >= 3 ? fallbackUsername : `palpiteiro_${state.user.id.slice(0, 8)}`),
+    is_admin: false
+  };
+
+  const { data, error } = await state.supabase
+    .from("profiles")
+    .upsert(profile, { onConflict: "id" })
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    toast(error.message);
+    return { username: state.user.email, is_admin: false };
+  }
+
+  return data || profile;
 }
 
 async function refreshData() {
