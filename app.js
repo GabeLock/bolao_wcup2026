@@ -1,8 +1,10 @@
 const BR_TZ = "America/Sao_Paulo";
 const CONFIG_KEY = "bolao2026.config";
 const DEMO_USER_KEY = "bolao2026.demoUser";
+const DEMO_PROFILES_KEY = "bolao2026.profiles";
 const DEMO_PREDICTIONS_KEY = "bolao2026.predictions";
 const DEMO_RESULTS_KEY = "bolao2026.results";
+const RESULT_OFFICIAL_DELAY_HOURS = 3;
 
 const state = {
   supabase: null,
@@ -11,6 +13,7 @@ const state = {
   matches: [],
   predictions: [],
   results: [],
+  profiles: [],
   view: "palpites",
   config: loadConfig()
 };
@@ -98,6 +101,7 @@ async function handleLogin(event) {
     state.user = { id: "demo-user", email, username: email.split("@")[0] || "Palpiteiro" };
     state.profile = { username: state.user.username, is_admin: true };
     localStorage.setItem(DEMO_USER_KEY, JSON.stringify(state.user));
+    upsertDemoProfile(state.user.id, state.profile.username, true);
     updateAuthUi();
     await refreshData();
     toast("Login local realizado.");
@@ -123,6 +127,7 @@ async function handleSignup(event) {
     state.user = { id: "demo-user", email, username };
     state.profile = { username, is_admin: true };
     localStorage.setItem(DEMO_USER_KEY, JSON.stringify(state.user));
+    upsertDemoProfile(state.user.id, username, true);
     updateAuthUi();
     await refreshData();
     toast("Cadastro local criado.");
@@ -173,6 +178,7 @@ async function loadProfile() {
 
 async function refreshData() {
   await loadMatches();
+  await loadProfiles();
   await loadPredictions();
   await loadResults();
   populateStageFilter();
@@ -193,6 +199,22 @@ async function loadMatches() {
   }
   const response = await fetch("./data/worldcup-2026-seed.json");
   state.matches = await response.json();
+}
+
+async function loadProfiles() {
+  if (state.supabase) {
+    const { data, error } = await state.supabase
+      .from("profiles")
+      .select("id, username, is_admin, created_at")
+      .order("username", { ascending: true });
+    state.profiles = error ? [] : data || [];
+    return;
+  }
+
+  state.profiles = JSON.parse(localStorage.getItem(DEMO_PROFILES_KEY) || "[]");
+  if (state.user && !state.profiles.some((profile) => profile.id === state.user.id)) {
+    upsertDemoProfile(state.user.id, state.profile?.username || state.user.username || "Participante", true);
+  }
 }
 
 async function loadPredictions() {
@@ -274,7 +296,7 @@ function renderMatches() {
   const status = el.statusFilter.value;
   const rows = state.matches.filter((match) => {
     const matchStage = match.stage || match.group_name;
-    const result = findResult(match.id);
+    const result = findOfficialResult(match.id);
     const locked = isLocked(match);
     const statusOk =
       status === "all" ||
@@ -295,13 +317,16 @@ function renderMatches() {
 
 function renderMatchCard(match) {
   const prediction = findPrediction(match.id);
-  const result = findResult(match.id);
+  const rawResult = findResult(match.id);
+  const result = findOfficialResult(match.id);
   const locked = isLocked(match);
   const finished = Boolean(result);
   const points = result && prediction ? scorePrediction(prediction, result, match) : null;
   const className = finished ? "finished" : locked ? "locked" : "";
   const statusText = finished
     ? `Resultado ${result.home_goals} x ${result.away_goals}`
+    : rawResult
+      ? `Placar aguardando oficializacao (${formatOfficialAt(match)})`
     : locked
       ? "JOGO INICIADO"
       : "Aberto";
@@ -402,7 +427,7 @@ async function renderRanking() {
             <td>${row.outcomes}</td>
             <td>${row.knockoutPoints}</td>
           </tr>
-        `).join("") || `<tr><td colspan="6">Sem resultados apurados ainda.</td></tr>`}
+        `).join("") || `<tr><td colspan="6">Nenhum participante inscrito ainda.</td></tr>`}
       </tbody>
     </table>
   `;
@@ -426,9 +451,20 @@ async function buildRanking() {
 
   const users = new Map();
   const predictions = JSON.parse(localStorage.getItem(DEMO_PREDICTIONS_KEY) || "[]");
+  const profiles = JSON.parse(localStorage.getItem(DEMO_PROFILES_KEY) || "[]");
+
+  profiles.forEach((profile) => {
+    users.set(profile.id, {
+      username: profile.username || "Participante",
+      points: 0,
+      exacts: 0,
+      outcomes: 0,
+      knockoutPoints: 0
+    });
+  });
 
   predictions.forEach((prediction) => {
-    const result = findResult(prediction.match_id);
+    const result = findOfficialResult(prediction.match_id);
     if (!result) return;
     const match = state.matches.find((item) => item.id === prediction.match_id);
     const row = users.get(prediction.user_id) || {
@@ -466,6 +502,7 @@ function renderRules() {
     "No mata-mata, considerar tempo normal mais prorrogacao; penaltis nao entram.",
     "Desempate: placares exatos, acertos de vencedor/empate, pontos no mata-mata, campeao correto e sorteio.",
     "A tabela de pontuacao deve ser atualizada apos cada rodada ou na periodicidade combinada pela organizacao.",
+    "Os placares reais devem ser atualizados no sistema 3 horas apos o horario de inicio de cada jogo, quando passam a ser considerados oficiais para conferencia dos palpites.",
     "Todos os participantes devem ter acesso a classificacao geral.",
     "Casos omissos ou situacoes nao previstas serao decididos pela organizacao do bolao, sempre buscando transparencia e igualdade entre os participantes."
   ];
@@ -488,19 +525,21 @@ function renderAdmin() {
     <div class="admin-grid">
       ${state.matches.map((match) => {
         const result = findResult(match.id);
+        const canUpdateResult = canUpdateOfficialResult(match);
         return `
           <form class="panel admin-result-form" data-result-match="${escapeHtml(match.id)}">
             <h3>${escapeHtml(match.home_team)} x ${escapeHtml(match.away_team)}</h3>
             <p>${formatKickoff(match.kickoff_utc)} - ${escapeHtml(match.city || "")}</p>
+            <p>${canUpdateResult ? "Placares liberados para conferencia oficial." : `Atualizacao liberada em ${formatOfficialAt(match)}.`}</p>
             <label>
               Gols ${escapeHtml(match.home_team)}
-              <input name="home_goals" type="number" min="0" max="30" value="${result?.home_goals ?? ""}" required>
+              <input name="home_goals" type="number" min="0" max="30" value="${result?.home_goals ?? ""}" ${canUpdateResult ? "" : "disabled"} required>
             </label>
             <label>
               Gols ${escapeHtml(match.away_team)}
-              <input name="away_goals" type="number" min="0" max="30" value="${result?.away_goals ?? ""}" required>
+              <input name="away_goals" type="number" min="0" max="30" value="${result?.away_goals ?? ""}" ${canUpdateResult ? "" : "disabled"} required>
             </label>
-            <button class="secondary-button" type="submit">Salvar resultado</button>
+            <button class="secondary-button" type="submit" ${canUpdateResult ? "" : "disabled"}>Salvar resultado oficial</button>
           </form>
         `;
       }).join("")}
@@ -515,6 +554,12 @@ function renderAdmin() {
 async function saveResult(event) {
   event.preventDefault();
   const matchId = event.currentTarget.dataset.resultMatch;
+  const match = state.matches.find((item) => item.id === matchId);
+  if (!match || !canUpdateOfficialResult(match)) {
+    toast(`Placares oficiais so podem ser atualizados ${RESULT_OFFICIAL_DELAY_HOURS} horas apos o inicio do jogo.`);
+    return;
+  }
+
   const formData = new FormData(event.currentTarget);
   const payload = {
     match_id: matchId,
@@ -624,8 +669,22 @@ function findResult(matchId) {
   return state.results.find((result) => result.match_id === matchId);
 }
 
+function findOfficialResult(matchId) {
+  const match = state.matches.find((item) => item.id === matchId);
+  if (!match || !canUpdateOfficialResult(match)) return null;
+  return findResult(matchId);
+}
+
 function isLocked(match) {
   return new Date(match.kickoff_utc).getTime() <= Date.now();
+}
+
+function officialResultAt(match) {
+  return new Date(new Date(match.kickoff_utc).getTime() + RESULT_OFFICIAL_DELAY_HOURS * 60 * 60 * 1000);
+}
+
+function canUpdateOfficialResult(match) {
+  return officialResultAt(match).getTime() <= Date.now();
 }
 
 function scorePrediction(prediction, result) {
@@ -650,6 +709,27 @@ function formatKickoff(iso) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(iso));
+}
+
+function formatOfficialAt(match) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: BR_TZ,
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(officialResultAt(match));
+}
+
+function upsertDemoProfile(id, username, isAdmin = false) {
+  const profiles = JSON.parse(localStorage.getItem(DEMO_PROFILES_KEY) || "[]");
+  const next = [
+    ...profiles.filter((profile) => profile.id !== id),
+    { id, username, is_admin: isAdmin, created_at: new Date().toISOString() }
+  ];
+  localStorage.setItem(DEMO_PROFILES_KEY, JSON.stringify(next));
+  state.profiles = next;
 }
 
 function startClock() {
