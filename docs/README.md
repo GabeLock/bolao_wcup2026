@@ -74,5 +74,6 @@ O arquivo `docs/data/worldcup-2026-seed.json` e uma carga inicial parcial para d
 - classificacao geral acessivel a todos os participantes;
 - atualizacao da tabela apos cada rodada ou em periodicidade combinada;
 - ranking exibe todos os palpiteiros inscritos, inclusive participantes ainda com 0 ponto;
+- backend cria automaticamente perfis de novos usuarios e inclui no ranking usuarios ja cadastrados via backfill;
 - placares reais devem ser atualizados 3 horas apos o inicio do jogo e passam a valer como oficiais para conferencia;
 - casos omissos decididos pela organizacao, preservando transparencia e igualdade.

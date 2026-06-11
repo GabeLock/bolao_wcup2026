@@ -7,6 +7,105 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+create or replace function public.safe_profile_username(base_username text, user_id uuid)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  clean_base text;
+  candidate text;
+  suffix text;
+begin
+  clean_base := trim(coalesce(base_username, ''));
+  clean_base := regexp_replace(clean_base, '\s+', '_', 'g');
+  clean_base := regexp_replace(clean_base, '[^A-Za-z0-9_.-]', '', 'g');
+
+  if char_length(clean_base) < 3 then
+    clean_base := 'palpiteiro';
+  end if;
+
+  clean_base := left(clean_base, 31);
+  candidate := clean_base;
+
+  if exists (select 1 from public.profiles where username = candidate and id <> user_id) then
+    suffix := '_' || left(replace(user_id::text, '-', ''), 8);
+    candidate := left(clean_base, 40 - char_length(suffix)) || suffix;
+  end if;
+
+  return candidate;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  desired_username text;
+begin
+  desired_username := coalesce(
+    new.raw_user_meta_data ->> 'username',
+    split_part(new.email, '@', 1),
+    'palpiteiro'
+  );
+
+  insert into public.profiles (id, username, is_admin, created_at)
+  values (
+    new.id,
+    public.safe_profile_username(desired_username, new.id),
+    false,
+    coalesce(new.created_at, now())
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
+
+with missing_users as (
+  select
+    users.id,
+    coalesce(users.created_at, now()) as created_at,
+    public.safe_profile_username(
+      coalesce(users.raw_user_meta_data ->> 'username', split_part(users.email, '@', 1), 'palpiteiro'),
+      users.id
+    ) as base_username
+  from auth.users
+  where not exists (
+    select 1 from public.profiles
+    where profiles.id = users.id
+  )
+),
+deduped_users as (
+  select
+    id,
+    created_at,
+    base_username,
+    row_number() over (partition by base_username order by created_at, id) as username_rank
+  from missing_users
+)
+insert into public.profiles (id, username, is_admin, created_at)
+select
+  id,
+  case
+    when username_rank = 1 then base_username
+    else left(base_username, 31) || '_' || left(replace(id::text, '-', ''), 8)
+  end,
+  false,
+  created_at
+from deduped_users
+on conflict (id) do nothing;
+
 create table if not exists public.matches (
   id text primary key,
   match_number integer,
@@ -210,3 +309,4 @@ as $$
 $$;
 
 grant execute on function public.get_leaderboard() to authenticated;
+grant execute on function public.safe_profile_username(text, uuid) to authenticated;
