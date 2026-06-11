@@ -1,4 +1,4 @@
 window.BOLAO_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: ""
+  supabaseUrl: "https://ozkhtxckgtftjawjxahd.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96a2h0eGNrZ3RmdGphd2p4YWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExODg2NzAsImV4cCI6MjA5Njc2NDY3MH0.OI49ZDXw3wkx1Tb2brtGl6cf7GbOT6VeNgxtxWk148M"
 };
