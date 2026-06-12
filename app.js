@@ -269,6 +269,7 @@ async function refreshData() {
   await loadMatches();
   await loadProfiles();
   await loadPredictions();
+  await syncOfficialSeedResults();
   await loadResults();
   populateStageFilter();
   updateAuthUi();
@@ -325,12 +326,42 @@ async function loadPredictions() {
 }
 
 async function loadResults() {
+  const seedResults = await loadSeedResults();
   if (state.supabase) {
     const { data, error } = await state.supabase.from("results").select("*");
-    state.results = error ? [] : data || [];
+    state.results = mergeResults(seedResults, error ? [] : data || []);
     return;
   }
-  state.results = JSON.parse(localStorage.getItem(DEMO_RESULTS_KEY) || "[]");
+  state.results = mergeResults(seedResults, JSON.parse(localStorage.getItem(DEMO_RESULTS_KEY) || "[]"));
+}
+
+async function syncOfficialSeedResults() {
+  if (!state.supabase) return;
+  const { error } = await state.supabase.rpc("sync_official_seed_results");
+  if (error && !String(error.message || "").includes("Could not find the function")) {
+    toast(error.message);
+  }
+}
+
+async function loadSeedResults() {
+  try {
+    const response = await fetch(`data/worldcup-2026-results.json?v=${Date.now()}`);
+    if (!response.ok) return [];
+    return normalizeResults(await response.json())
+      .filter((result) => {
+        const match = state.matches.find((item) => item.id === result.match_id);
+        return match && canUpdateOfficialResult(match);
+      });
+  } catch {
+    return [];
+  }
+}
+
+function mergeResults(seedResults, storedResults) {
+  const resultsByMatch = new Map();
+  seedResults.forEach((result) => resultsByMatch.set(result.match_id, result));
+  storedResults.forEach((result) => resultsByMatch.set(result.match_id, result));
+  return [...resultsByMatch.values()];
 }
 
 function updateAuthUi() {
@@ -924,6 +955,20 @@ function normalizeMatches(payload) {
       source: item.source || "api"
     };
   }).filter((match) => match.kickoff_utc);
+}
+
+function normalizeResults(payload) {
+  const items = Array.isArray(payload) ? payload : payload.results || payload.response || [];
+  return items.map((item) => ({
+    match_id: String(item.match_id || item.matchId || item.id || ""),
+    home_goals: Number(item.home_goals ?? item.homeGoals ?? item.goals?.home),
+    away_goals: Number(item.away_goals ?? item.awayGoals ?? item.goals?.away),
+    updated_at: item.updated_at || item.updatedAt || new Date().toISOString()
+  })).filter((result) =>
+    result.match_id &&
+    Number.isInteger(result.home_goals) &&
+    Number.isInteger(result.away_goals)
+  );
 }
 
 function handleConfigSave(event) {
