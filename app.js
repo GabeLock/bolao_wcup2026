@@ -60,6 +60,7 @@ const TEAM_FLAGS = {
 
 const state = {
   supabase: null,
+  supabaseUrl: "",
   user: null,
   profile: null,
   matches: [],
@@ -117,6 +118,7 @@ function setupSupabase() {
   const url = state.config.url || sharedConfig.supabaseUrl;
   const anonKey = state.config.anonKey || sharedConfig.supabaseAnonKey;
   const isConfigured = Boolean(url && anonKey && window.supabase);
+  state.supabaseUrl = isConfigured ? url.replace(/\/$/, "") : "";
   state.supabase = isConfigured ? window.supabase.createClient(url, anonKey) : null;
   el.modeLabel.textContent = isConfigured ? "Supabase ativo" : "Modo local";
   el.modeDescription.textContent = isConfigured
@@ -269,11 +271,25 @@ async function refreshData() {
   await loadMatches();
   await loadProfiles();
   await loadPredictions();
+  await triggerBackendResultSync();
   await syncOfficialSeedResults();
   await loadResults();
   populateStageFilter();
   updateAuthUi();
   render();
+}
+
+async function triggerBackendResultSync() {
+  if (!state.supabaseUrl || !state.supabase) return;
+  try {
+    await fetch(`${state.supabaseUrl}/functions/v1/sync-fixtures`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: "github-pages" })
+    });
+  } catch {
+    // The scheduled Supabase cron remains the authoritative background sync.
+  }
 }
 
 async function loadMatches() {
