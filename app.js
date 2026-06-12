@@ -540,10 +540,7 @@ async function savePrediction(event) {
       p_away_goals: payload.away_goals
     });
     if (error) {
-      const { error: tableError } = await state.supabase
-        .from("predictions")
-        .upsert(payload, { onConflict: "user_id,match_id" });
-      if (tableError) return toast(tableError.message || error.message);
+      return toast(formatPredictionSaveError(error.message));
     }
   } else {
     const others = state.predictions.filter((item) => item.match_id !== matchId);
@@ -554,6 +551,18 @@ async function savePrediction(event) {
   await loadPredictions();
   render();
   toast("Palpite salvo.");
+}
+
+function formatPredictionSaveError(message) {
+  const text = String(message || "");
+  if (
+    text.includes("row-level security") ||
+    text.includes("Could not find the function") ||
+    text.includes("schema cache")
+  ) {
+    return "Backend precisa do reparo de palpites. Rode supabase/fix_prediction_write_access.sql no SQL Editor.";
+  }
+  return text;
 }
 
 async function renderRanking() {
