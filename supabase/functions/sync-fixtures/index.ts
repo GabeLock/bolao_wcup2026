@@ -18,9 +18,18 @@ type ApiFootballFixture = {
   };
 };
 
+type MatchRow = {
+  id: string;
+  match_number: number | null;
+  home_team: string;
+  away_team: string;
+  kickoff_utc: string;
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const API_FOOTBALL_KEY = Deno.env.get("API_FOOTBALL_KEY") ?? "";
+const RESULT_DELAY_MS = 3 * 60 * 60 * 1000;
 
 Deno.serve(async () => {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !API_FOOTBALL_KEY) {
@@ -41,52 +50,87 @@ Deno.serve(async () => {
 
   const payload = await fixturesResponse.json();
   const fixtures = Array.isArray(payload.response) ? payload.response as ApiFootballFixture[] : [];
-  const matches = fixtures.map((item, index) => ({
-    id: String(item.fixture.id),
-    match_number: index + 1,
-    stage: item.league?.round ?? "Copa do Mundo 2026",
-    group_name: groupFromRound(item.league?.round),
-    home_team: item.teams?.home?.name ?? "A definir",
-    away_team: item.teams?.away?.name ?? "A definir",
-    kickoff_utc: new Date(item.fixture.date).toISOString(),
-    venue: item.fixture.venue?.name ?? "",
-    city: item.fixture.venue?.city ?? "",
-    source: "api-football"
-  }));
-
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const { error } = await supabase.from("matches").upsert(matches, { onConflict: "id" });
+  const { data: matches, error: matchesError } = await supabase
+    .from("matches")
+    .select("id, match_number, home_team, away_team, kickoff_utc")
+    .order("kickoff_utc", { ascending: true });
 
-  if (error) return json({ error: error.message }, 500);
+  if (matchesError) return json({ error: matchesError.message }, 500);
 
   const now = Date.now();
-  const results = fixtures
-    .filter((item) => {
-      const kickoff = new Date(item.fixture.date).getTime();
-      return (
-        now >= kickoff + 3 * 60 * 60 * 1000 &&
-        typeof item.goals?.home === "number" &&
-        typeof item.goals?.away === "number"
-      );
-    })
-    .map((item) => ({
-      match_id: String(item.fixture.id),
+  const results = fixtures.flatMap((item) => {
+    if (!hasOfficialGoals(item)) return [];
+    const kickoff = new Date(item.fixture.date).getTime();
+    if (now < kickoff + RESULT_DELAY_MS) return [];
+
+    const match = findSeedMatch(item, matches ?? []);
+    if (!match) return [];
+
+    return [{
+      match_id: match.id,
       home_goals: item.goals?.home ?? 0,
       away_goals: item.goals?.away ?? 0,
       updated_at: new Date().toISOString()
-    }));
+    }];
+  });
 
   if (results.length) {
     const { error: resultsError } = await supabase.from("results").upsert(results, { onConflict: "match_id" });
     if (resultsError) return json({ error: resultsError.message }, 500);
   }
 
-  return json({ imported: matches.length, results_updated: results.length });
+  return json({
+    fixtures_seen: fixtures.length,
+    seeded_matches_seen: matches?.length ?? 0,
+    results_updated: results.length,
+    result_match_ids: results.map((result) => result.match_id)
+  });
 });
 
-function groupFromRound(round?: string) {
-  const match = round?.match(/Group\s+([A-L])/i);
-  return match ? `Grupo ${match[1].toUpperCase()}` : null;
+function hasOfficialGoals(item: ApiFootballFixture) {
+  return (
+    typeof item.goals?.home === "number" &&
+    typeof item.goals?.away === "number" &&
+    !["NS", "TBD", "PST", "CANC", "ABD"].includes(item.fixture.status?.short ?? "")
+  );
+}
+
+function findSeedMatch(item: ApiFootballFixture, matches: MatchRow[]) {
+  const apiHome = normalizeTeam(item.teams?.home?.name ?? "");
+  const apiAway = normalizeTeam(item.teams?.away?.name ?? "");
+  const apiKickoff = new Date(item.fixture.date).getTime();
+
+  return matches.find((match) => {
+    const sameTeams =
+      normalizeTeam(match.home_team) === apiHome &&
+      normalizeTeam(match.away_team) === apiAway;
+    const closeKickoff = Math.abs(new Date(match.kickoff_utc).getTime() - apiKickoff) <= 18 * 60 * 60 * 1000;
+    return sameTeams && closeKickoff;
+  });
+}
+
+function normalizeTeam(name: string) {
+  const aliases: Record<string, string> = {
+    "czechia": "czech republic",
+    "korea republic": "south korea",
+    "usa": "united states",
+    "united states of america": "united states",
+    "cote divoire": "ivory coast",
+    "côte divoire": "ivory coast",
+    "turkiye": "turkey",
+    "türkiye": "turkey",
+    "ir iran": "iran",
+    "cabo verde": "cape verde",
+    "congo dr": "dr congo"
+  };
+  const normalized = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return aliases[normalized] ?? normalized;
 }
 
 function json(body: unknown, status = 200) {
