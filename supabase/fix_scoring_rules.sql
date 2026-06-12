@@ -1,5 +1,6 @@
 -- Reparo da regra de pontuacao do bolao.
--- Rode no SQL Editor para garantir que o ranking some gols corretos quando nao houver placar exato.
+-- Rode no SQL Editor para garantir que o ranking use a regra por prioridade:
+-- 5 placar exato; 3 vencedor/empate; 1 algum gol correto; 0 sem acerto.
 
 create or replace function public.prediction_points(
   pred_home integer,
@@ -14,13 +15,11 @@ as $$
   select case
     -- Placar exato: 5 pontos, sem soma adicional.
     when pred_home = real_home and pred_away = real_away then 5
-    else
-      -- Acertou vencedor ou empate: 3 pontos.
-      (case when sign(pred_home - pred_away) = sign(real_home - real_away) then 3 else 0 end) +
-      -- Acertou gols do time da esquerda: 1 ponto.
-      (case when pred_home = real_home then 1 else 0 end) +
-      -- Acertou gols do time da direita: 1 ponto.
-      (case when pred_away = real_away then 1 else 0 end)
+    -- Acertou vencedor ou empate com placar diferente: 3 pontos.
+    when sign(pred_home - pred_away) = sign(real_home - real_away) then 3
+    -- Sem acerto de vencedor/empate, mas acertou algum numero de gols: 1 ponto.
+    when pred_home = real_home or pred_away = real_away then 1
+    else 0
   end;
 $$;
 

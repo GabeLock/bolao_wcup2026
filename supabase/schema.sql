@@ -273,10 +273,9 @@ immutable
 as $$
   select case
     when pred_home = real_home and pred_away = real_away then 5
-    else
-      (case when sign(pred_home - pred_away) = sign(real_home - real_away) then 3 else 0 end) +
-      (case when pred_home = real_home then 1 else 0 end) +
-      (case when pred_away = real_away then 1 else 0 end)
+    when sign(pred_home - pred_away) = sign(real_home - real_away) then 3
+    when pred_home = real_home or pred_away = real_away then 1
+    else 0
   end;
 $$;
 

@@ -689,7 +689,7 @@ function renderRules() {
     "Ao atingir o horario do jogo, o preenchimento fica travado e palpites ausentes valem 0.",
     "Placar exato vale 5 pontos.",
     "Acerto de vencedor ou empate vale 3 pontos.",
-    "Cada numero de gols correto de uma equipe soma 1 ponto quando nao houver placar exato.",
+    "Quando nao houver placar exato nem acerto de vencedor/empate, algum numero de gols correto vale 1 ponto.",
     "No mata-mata, considerar tempo normal mais prorrogacao; penaltis nao entram.",
     "Desempate: placares exatos, acertos de vencedor/empate, palpite correto do campeao e sorteio.",
     "A tabela de pontuacao deve ser atualizada apos cada rodada ou na periodicidade combinada pela organizacao.",
@@ -1033,10 +1033,9 @@ function canUpdateOfficialResult(match) {
 function scorePrediction(prediction, result) {
   if (!prediction || !result) return 0;
   if (prediction.home_goals === result.home_goals && prediction.away_goals === result.away_goals) return 5;
-  const outcomePoints = sameOutcome(prediction, result) ? 3 : 0;
-  const homeGoalPoint = prediction.home_goals === result.home_goals ? 1 : 0;
-  const awayGoalPoint = prediction.away_goals === result.away_goals ? 1 : 0;
-  return outcomePoints + homeGoalPoint + awayGoalPoint;
+  if (sameOutcome(prediction, result)) return 3;
+  if (prediction.home_goals === result.home_goals || prediction.away_goals === result.away_goals) return 1;
+  return 0;
 }
 
 function sameOutcome(a, b) {
