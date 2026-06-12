@@ -1033,10 +1033,10 @@ function canUpdateOfficialResult(match) {
 function scorePrediction(prediction, result) {
   if (!prediction || !result) return 0;
   if (prediction.home_goals === result.home_goals && prediction.away_goals === result.away_goals) return 5;
-  let points = sameOutcome(prediction, result) ? 3 : 0;
-  if (prediction.home_goals === result.home_goals) points += 1;
-  if (prediction.away_goals === result.away_goals) points += 1;
-  return points;
+  const outcomePoints = sameOutcome(prediction, result) ? 3 : 0;
+  const homeGoalPoint = prediction.home_goals === result.home_goals ? 1 : 0;
+  const awayGoalPoint = prediction.away_goals === result.away_goals ? 1 : 0;
+  return outcomePoints + homeGoalPoint + awayGoalPoint;
 }
 
 function sameOutcome(a, b) {
